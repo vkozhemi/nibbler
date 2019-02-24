@@ -9,6 +9,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h> 
+#include <ncurses.h>
+#include <iostream>
+#include <curses.h>
 #define MAX 80 
 #define PORT 8080 
 #define SA struct sockaddr 
@@ -20,12 +23,15 @@ int func(int sockfd)
     for (;;) { 
         // bzero(buff, sizeof(buff)); 
         printf("Enter the string : "); 
-        // n = 0; 
+         n = 0; 
        // buff[0] = getchar();
-       while ((buff[n++] = getchar()) != '\n') 
-            ; 
-       // buff[0] = 'h';
-       // buff[1] = 'i'; 
+       // while ((buff[n++] = getchar()) != '\n') 
+       //      ; 
+        buff[0] = 'h';
+       buff[1] = 'i'; 
+       // 
+        //buff[n] = getchar();
+       
         write(sockfd, buff, sizeof(buff)); 
         //bzero(buff, sizeof(buff)); 
         // read(sockfd, buff, sizeof(buff)); 
