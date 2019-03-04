@@ -1,11 +1,35 @@
 #pragma once
 
+#include <netdb.h> 
+#include <netinet/in.h> 
+#include <stdlib.h> 
+#include <string.h> 
+#include <sys/socket.h> 
+#include <sys/types.h> 
+#include <arpa/inet.h> 
+#include <iostream>
+#include <unistd.h>
+#include <stdio.h> 
+
+#define PORT 8080 
+#define SA struct sockaddr 
+
 #include <dlfcn.h>
 #include <unistd.h>
 #include "IGraph.hpp"
 #include "../libSFMLSound/ISound.hpp"
 #include "Snake.hpp"
-#define MAX 80 
+#include "Network.hpp"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <string.h>
 
 class Game
 {
@@ -30,25 +54,36 @@ class Game
 	bool				start;
 	int					buttonNum;
 	rect				appleRect;
+	rect				boomRect;
 	int					winner;
 	int					gameOverCount;
+	bool				startNetwork;
+	bool				server;
+	eKeyType			keyToNetwork;
+	std::string			idClient;
+	Network				*network;
+
+	
+	// int listenfd, connfd, nready, maxfdp1; 
+ //    char buffer[MAXLINE]; 
+ //    pid_t childpid; 
+ //    fd_set rset; 
+ //    ssize_t n; 
+ //    socklen_t len; 
+	// struct sockaddr_in cliaddr, servaddr; 
 
 public:
+	void					netGame(void);
+	void					clientGame(void);
+	void					sendNet(int command);
+	int						recvNet(void);
+
 
 	Game();
 	Game(int w, int h);
 	Game(int w, int h, std::string ip);
 	~Game();
 	
-	bool				client_serv;
-	bool				server_clie;
-	std::string 		ip;
-	char 				buff[MAX]; 
-    int 				n; 
-    int 				sockfd;
-    int 				connfd;
-    bool 				mult;
-
 	void	keyHandle(eKeyType key);
 	void	getLib(eKeyType key);
 	void	closeLib();
@@ -57,9 +92,7 @@ public:
 	bool	checkCollision();
 	bool	newGame();
 	void	gameOver();
-	void	server();
-	void 	client();
-	void	func_server();
-
+	void	networkFunc();
+	void	createServer();
 
 };

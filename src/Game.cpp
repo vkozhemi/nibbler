@@ -1,33 +1,4 @@
 #include "../inc/Game.hpp"
-
-#include <netdb.h> 
-#include <netinet/in.h> 
-#include <stdlib.h> 
-#include <string.h> 
-#include <sys/socket.h> 
-#include <sys/types.h> 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <arpa/inet.h> 
-#include <iostream>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h> 
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <string.h> 
-#include <sys/socket.h> 
-#include <iostream>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-// #define MAX 80 
-#define PORT 8080 
-#define SA struct sockaddr 
-
 // #include "../libSFMLSound/SoundSFML.hpp"
 
 Game::Game() {
@@ -38,47 +9,48 @@ Game::Game() {
 	menu = true;
 	start = false;
 	multiplayer = false;
+	startNetwork = false;
 	speed = 15;
+	network = NULL;
 }
 
 Game::Game(int w, int h) {
 	snake1 = new Snake(w, h);
 	snake2 = new Snake(w, h);
-	libNum = num3;
+	libNum = num1;
 	buttonNum = 2;
 	menu = true;
 	start = false;
 	multiplayer = false;
+	startNetwork = false;	
 	speed = 15;
 	winner = 1;
 	ext_library2 = dlopen("libSFMLSound/libSFMLSound.so", RTLD_LAZY);
 	creatS = (create_s*)dlsym(ext_library2,"createSound");
 	destroyS = (destroy_s*)dlsym(ext_library2,"destroySound");
 	soundLib = creatS();
+	network = NULL;
 
 	snake1->snakeRect[0].r = 0.97f;
 	snake1->snakeRect[0].g = 0.14f;
 	snake1->snakeRect[0].b = 0.45f;
-	snake2->snakeRect[0].r = 1;
-	snake2->snakeRect[0].g = 1;
-	snake2->snakeRect[0].b = 1;
-
-	client_serv = false;
-	server_clie = true;
-	mult = false;
-	server();
+	snake2->snakeRect[0].r = 0.98f;
+	snake2->snakeRect[0].g = 0.58f;
+	snake2->snakeRect[0].b = 0.12f;
 }
 
-Game::Game(int w, int h, std::string ip) {
+Game::Game(int w, int h, std::string id) {
 	snake1 = new Snake(w, h);
 	snake2 = new Snake(w, h);
-	libNum = num3;
+	libNum = num1;
 	buttonNum = 2;
 	menu = true;
 	start = false;
 	multiplayer = false;
 	speed = 15;
 	winner = 1;
+	server = false;
+	startNetwork = true;
 	ext_library2 = dlopen("libSFMLSound/libSFMLSound.so", RTLD_LAZY);
 	creatS = (create_s*)dlsym(ext_library2,"createSound");
 	destroyS = (destroy_s*)dlsym(ext_library2,"destroySound");
@@ -87,19 +59,24 @@ Game::Game(int w, int h, std::string ip) {
 	snake1->snakeRect[0].r = 0.97f;
 	snake1->snakeRect[0].g = 0.14f;
 	snake1->snakeRect[0].b = 0.45f;
-	snake2->snakeRect[0].r = 1;
-	snake2->snakeRect[0].g = 1;
-	snake2->snakeRect[0].b = 1;
+	snake2->snakeRect[0].r = 0.98f;
+	snake2->snakeRect[0].g = 0.58f;
+	snake2->snakeRect[0].b = 0.12f;
 
-	client_serv = true;
-	server_clie = false;
-	mult = false;
-	std::cout << "ip = " << ip << std::endl;
+	idClient = id;
+	network = new Network(false);
 }
 
 Game::~Game() {
 	dlclose(ext_library);
 }
+
+
+void	Game::createServer() {
+	if (!network)
+		network = new Network(true);
+}
+
 
 void	Game::closeLib() {
 	std::cout << "closeLib" << std::endl;
@@ -135,11 +112,6 @@ void	Game::getLib(eKeyType key) {
 	{
 		dynLib->setMultiplayer(true);
 		std::cout << "multiplayer on" << std::endl;
-		//server();
-		// if (client_serv)
-		// 	client();
-		mult = true;
-
 	}
 	else
 	{
@@ -180,6 +152,11 @@ bool	Game::newGame() {
 }
 
 void	Game::keyHandle(eKeyType key) {
+	keyToNetwork = key;
+	// std::cout << key << std::endl;
+	
+
+	std::cout << "key = " << key << std::endl;
 	if (!menu)
 		soundLib->set_menu(false);
 	
@@ -200,26 +177,31 @@ void	Game::keyHandle(eKeyType key) {
 	else if (menu) {
 		switch (key) {
 			case (up):		{
+				std::cout << "up" << std::endl;
 				((buttonNum == 2 && !start) || (buttonNum == 1 && start)) ? buttonNum = 4 : buttonNum--;
 				soundLib->set_switch_menu_sound(true);
 				break;
 			}
 			case (down):	{
+				std::cout << "down" << std::endl;
 				(buttonNum == 4) ? buttonNum = (start ? 1 : 2) : buttonNum++; 
 				soundLib->set_switch_menu_sound(true);
 				break;
 			}
 			case (left):	{
+				std::cout << "left" << std::endl;
 				(speed != 10) ? speed-- : 0;
 				soundLib->set_switch_menu_sound(true);
 				break;
 			}
 			case (right):	{
+				std::cout << "right" << std::endl;
 				soundLib->set_switch_menu_sound(true);
 				(speed != 25) ? speed++ : 0;
 				break;
 			}
 			case (enter): {
+				std::cout << "enter" << std::endl;
 				switch (buttonNum) {
 					case 1 : {
 						soundLib->set_menu(false);
@@ -229,26 +211,43 @@ void	Game::keyHandle(eKeyType key) {
 						break ;
 					}
 					case 2 : {
-						soundLib->set_menu(false);
-						soundLib->set_change_sound(true);
-						newGame();
 						menu = false;
 						start = true;
+						soundLib->set_menu(menu);
+						soundLib->set_change_sound(true);
+						if (startNetwork && server)
+							createServer();
+						else if (network)
+							delete network;
+						newGame();
 						break ;
 					}
 					case 3 : {
-						if (multiplayer) {
-							multiplayer = false;
-							dynLib->setMultiplayer(false);
-							std::cout << "multiplayer OFF" << std::endl;
-						}
+						if (startNetwork && !server)
+							break;
 						else {
-							std::cout << "multiplayer on" << std::endl;
-							multiplayer = true;
-							dynLib->setMultiplayer(true);
+							if (!multiplayer) {
+								std::cout << "multiplayer on" << std::endl;
+								multiplayer = true;
+								dynLib->setMultiplayer(multiplayer);
+							}
+							else if (multiplayer && !startNetwork) {
+								server = true;
+								startNetwork = true;
+								dynLib->setMultiplayer(multiplayer);
+								dynLib->setNetwork(startNetwork);
+								std::cout << "multiplayer NET" << std::endl;
+							}
+							else {
+								multiplayer = false;
+								startNetwork = false;
+								dynLib->setMultiplayer(multiplayer);
+								dynLib->setNetwork(startNetwork);
+								std::cout << "multiplayer OFF" << std::endl;
+							}
+							start = false ;
+							break;
 						}
-						start = false ;
-						break; 
 					}
 					case 4 : dynLib->close("EXIT"); break ;
 				}
@@ -327,7 +326,9 @@ bool	Game::checkCollision() {
 
 	for (int i = 1; i < snake1->snakeRect.size(); i++) {
 		if (snake1->snakeRect[0].x == snake1->snakeRect[i].x && snake1->snakeRect[0].y == snake1->snakeRect[i].y) {
-			winner = 1;
+			boomRect.x = snake1->snakeRect[0].x;
+			boomRect.y = snake1->snakeRect[0].y;
+			winner = 2;
 			return (false);
 		}
 		else if (multiplayer && snake2->snakeRect[0].x == snake1->snakeRect[i].x && snake2->snakeRect[0].y == snake1->snakeRect[i].y) {
@@ -338,11 +339,17 @@ bool	Game::checkCollision() {
 	}
 
 	if (multiplayer) {
-		if (snake1->snakeRect[0].x == snake2->snakeRect[0].x && snake1->snakeRect[0].y == snake2->snakeRect[0].y) 
+		if (snake1->snakeRect[0].x == snake2->snakeRect[0].x && snake1->snakeRect[0].y == snake2->snakeRect[0].y) {
+			winner = (snake1->size > snake2->size) ? 1 : 2;
+			boomRect.x = snake1->snakeRect[0].x;
+			boomRect.y = snake1->snakeRect[0].y;
 			return (false);
+		}
 		for (int i = 1; i < snake2->snakeRect.size(); i++) {
 			if (snake2->snakeRect[0].x == snake2->snakeRect[i].x && snake2->snakeRect[0].y == snake2->snakeRect[i].y) {
-				winner = 2;
+				boomRect.x = snake2->snakeRect[0].x;
+				boomRect.y = snake2->snakeRect[0].y;
+				winner = 1;
 				return (false);
 			}
 			else if (snake1->snakeRect[0].x == snake2->snakeRect[i].x && snake1->snakeRect[0].y == snake2->snakeRect[i].y) {
@@ -365,6 +372,10 @@ void	Game::gameOver() {
 	gameOverCount = 200;
 }
 
+void	Game::networkFunc() {
+
+}
+
 void	Game::mainCycle() {
 	size_t i = 0;
 
@@ -372,18 +383,19 @@ void	Game::mainCycle() {
 	getLib(libNum);
 	
 	while (dynLib->windIsOpen()) {
-		
-		// else if (server_clie)
 
 		if (!menu && (i % (15 - (speed - 15)) == 0 && !snake1->moveSnake() )){
-			winner = 1;
+			winner = 2;
 			std::cout << "snake outside the box" << std::endl;
+			boomRect.x = snake1->snakeRect[0].x;
+			boomRect.y = snake1->snakeRect[0].y;
 			gameOver();
 		}
 		if (multiplayer && !menu && (i % (15 - (speed - 15)) == 0 && !snake2->moveSnake() )) {
 			std::cout << "snake outside the box" << std::endl;
-
-			winner = 2;
+			winner = 1;
+			boomRect.x = snake2->snakeRect[0].x;
+			boomRect.y = snake2->snakeRect[0].y;
 			gameOver();
 		}
 		if (!menu && (i % 750 == 0 || appleRect.x == -1000))
@@ -398,7 +410,7 @@ void	Game::mainCycle() {
 		}
 
 		if (gameOverCount) {
-			dynLib->drawGameOver(winner);
+			dynLib->drawGameOver(winner, boomRect);
 			gameOverCount--;
 		}
 		else if (menu)
@@ -408,147 +420,14 @@ void	Game::mainCycle() {
 
 		soundLib->Sound();
 
+		if (network != NULL)
+			network->cycle(keyToNetwork);
+
 		if ( i == 2000000000 )
 			i = 0;
 		if (!menu)
 			i++;
 
-		if (server_clie && mult)
-			func_server();
 	}
 }
 
-
-  
-// Function designed for chat between client and server. 
-void Game::func_server() 
-{ 
-    
-
-    // read the message from client and copy it in buffer
-    read(connfd, buff, sizeof(buff)); 
-    // print buffer which contains the client contents 
-    if ((strcmp(buff, "")) != 0){
-    	std::cout << "buff = " << buff << std::endl; 
-    }
-    
-    bzero(buff, MAX); 
-    //n = 0; 
-    // copy server message in the buffer 
-    //buff[n] = getchar();
-        
-    // and send that buffer to client 
-    //write(sockfd, buff, sizeof(buff)); 
-} 
-  
-// SERVER Driver function 
-void Game::server() 
-{ 
-   // int sockfd, connfd, len; 
-    int len; 
-    struct sockaddr_in servaddr, cli; 
-  
-    // socket create and verification 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0); 
-    if (sockfd == -1) { 
-        printf("socket creation failed...\n"); 
-        exit(0); 
-    } 
-    else
-        printf("Socket successfully created..\n"); 
-    bzero(&servaddr, sizeof(servaddr)); 
-  
-    // assign IP, PORT 
-    servaddr.sin_family = AF_INET; 
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
-    servaddr.sin_port = htons(PORT); 
-  
-    // Binding newly created socket to given IP and verification 
-    if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) { 
-        printf("socket bind failed...\n"); 
-        exit(0); 
-    } 
-    else
-        printf("Socket successfully binded..\n"); 
-  
-    // Now server is ready to listen and verification 
-    if ((listen(sockfd, 5)) != 0) { 
-        printf("Listen failed...\n"); 
-        exit(0); 
-    } 
-    else
-        printf("Server listening..\n"); 
-    len = sizeof(cli); 
-  
-    // Accept the data packet from client and verification 
-    connfd = accept(sockfd, (SA*)&cli, (socklen_t *)&len); 
-    if (connfd < 0) { 
-        printf("server acccept failed...\n"); 
-        exit(0); 
-    } 
-    else
-        printf("server acccept the client...\n"); 
-  
-    // Function for chatting between client and server 
-    //func_server(); 
-  
-    // After chatting close the socket 
-    //close(sockfd); 
-    std::cout << "SERVER LOADED" <<  buff << std::endl; 
-} 
-
-
-
-
-//========================= CLIENT==============================
-// void func_client(int sockfd) 
-// { 
-//     char buff[MAX]; 
-//     int n; 
-//     // for (;;) { 
-//         bzero(buff, sizeof(buff)); 
-//         printf("Enter the string : "); 
-//         n = 0; 
-//         buff[n] = getchar();
-             
-//         write(sockfd, buff, sizeof(buff)); 
-//         bzero(buff, sizeof(buff)); 
-//         read(sockfd, buff, sizeof(buff)); 
-//         printf("From Server : %s", buff);
-//     // }
-// }
-
-// void	Game::client()
-// {
-//     int sockfd, connfd; 
-//     struct sockaddr_in servaddr, cli; 
-  
-//     // socket create and varification 
-//     sockfd = socket(AF_INET, SOCK_STREAM, 0); 
-//     if (sockfd == -1) { 
-//         printf("socket creation failed...\n"); 
-//         exit(0); 
-//     } 
-//     else
-//         printf("Socket successfully created..\n"); 
-//     bzero(&servaddr, sizeof(servaddr)); 
-  
-//     // assign IP, PORT 
-//     servaddr.sin_family = AF_INET; 
-//     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
-//     servaddr.sin_port = htons(PORT); 
-  
-//     // connect the client socket to server socket 
-//     if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) { 
-//         printf("connection with the server failed...\n"); 
-//         exit(0); 
-//     } 
-//     else
-//         printf("connected to the server..\n"); 
-  
-//     // function for chat 
-//     func_client(sockfd); 
-  
-//     // close the socket 
-//     close(sockfd); 
-// } 

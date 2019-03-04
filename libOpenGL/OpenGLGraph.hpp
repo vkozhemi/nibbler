@@ -19,6 +19,7 @@ class SDLGraph : public IGraph
 	double x1, y1;
 
 protected:
+	bool					network;
 	bool					multiplayer;
 	eKeyType				key;
 
@@ -40,19 +41,20 @@ public:
 	void 					drawApple3DSphera(rect appleRect);
 	void 					drawApple3DCube(rect appleRect);
 	void					drawCubeFrame(rect snakeRect);
-	void					drawCube(rect snakeRect, rect snakeColor);
+	void					drawCube(rect snakeRect, rect snakeColor, int i);
 
 	virtual void			drawMenu(int buttonNum, bool start, int speed);
 	virtual bool			windIsOpen();
 	virtual void			handleEvent();
 	virtual	void			setMultiplayer(bool m);
+	virtual	void			setNetwork(bool m);
 	virtual void			setKeyDown();
 	void 					setKeyDownRotate();
 	virtual eKeyType		getKey();
 	virtual void			setKey(eKeyType k);
 	void 					drawSphere(double r, int lats, int longs, rect appleRect);
 	void 					drawFrame();
-	virtual void			drawGameOver(int winner);
+	virtual void			drawGameOver(int winner, rect boomRect);
 
 
 

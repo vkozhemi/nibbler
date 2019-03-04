@@ -39,7 +39,7 @@ SDLGraph::~SDLGraph() {
 	TTF_Quit();
 	SDL_Quit();
 }
-
+void        SDLGraph::setNetwork(bool m) { network = m; }
 void		SDLGraph::setMultiplayer(bool m) { multiplayer = m; }
 eKeyType	SDLGraph::getKey() { return (key); }
 void		SDLGraph::setKey(eKeyType k) { key = k; }
@@ -65,9 +65,10 @@ void		SDLGraph::init() {
 
 	snake1Texture = IMG_LoadTexture(gRenderer, "resources/square.png");
 	snake2Texture = IMG_LoadTexture(gRenderer, "resources/square1.png");
-	head1Texture = IMG_LoadTexture(gRenderer, "resources/square1.png");
-	head2Texture = IMG_LoadTexture(gRenderer, "resources/square.png");
-	appleTexture = IMG_LoadTexture(gRenderer, "resources/apple1.png");
+	head1Texture = IMG_LoadTexture(gRenderer, "resources/squareHead.png");
+	head2Texture = IMG_LoadTexture(gRenderer, "resources/squareHead2.png");
+	appleTexture = IMG_LoadTexture(gRenderer, "resources/apple.png");
+	boomTexture = IMG_LoadTexture(gRenderer, "resources/boom.png");
 	if (!snake1Texture || !appleTexture || !snake2Texture)
 		close("Snake1 or appleTexture image could not load");
 
@@ -146,7 +147,7 @@ void		SDLGraph::drawMenu(int buttonNum, bool start, int speed) {
 	if (start)
 		renderText("CONTINUE", snake1->screenWidth / 2 - 50, snake1->screenHeiht / 2 - 100, (buttonNum == 1) ? true : false);
 	renderText("NEW GAME", snake1->screenWidth / 2 - 50, snake1->screenHeiht / 2 - 50, (buttonNum == 2) ? true : false);
-	renderText((std::string("MULTIPLAYER ") + (multiplayer ? "ON" : "OFF")).c_str(), snake1->screenWidth / 2 - 50, snake1->screenHeiht / 2, (buttonNum == 3) ? true : false);
+	renderText((std::string("MULTIPLAYER ") + (multiplayer ? (network ? "NET" : "LOCAL") : "OFF")).c_str(), snake1->screenWidth / 2 - 50, snake1->screenHeiht / 2, (buttonNum == 3) ? true : false);
 	renderText("EXIT", snake1->screenWidth / 2 - 50, snake1->screenHeiht / 2 + 50, (buttonNum == 4) ? true : false);
 	renderText(("SPEED  " + std::to_string(speed)).c_str(), snake1->screenWidth / 2 - 50, snake1->screenHeiht / 2 - 300, false);
 
@@ -158,7 +159,14 @@ void		SDLGraph::drawMenu(int buttonNum, bool start, int speed) {
 	SDL_RenderPresent(gRenderer);
 }
 
-void		SDLGraph::drawGameOver(int winner) {
+void		SDLGraph::drawGameOver(int winner, rect boomRect) {
+
+	boomRect.h = 100;
+	boomRect.w = 100;
+	boomRect.x -= 25;
+	boomRect.y -= 25;
+	rectForSDL = toSDLRect(boomRect);
+	SDL_RenderCopy(gRenderer, boomTexture, NULL, &rectForSDL);
 
 	SDL_SetRenderDrawColor( gRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 	renderText("GAME OVER", snake1->screenWidth / 2 - 50, snake1->screenHeiht / 2 - 50, false);
