@@ -11,7 +11,7 @@ protected:
 	bool switch_menu_sound;
 	bool game_over;
 	bool new_game;
-
+	bool muteVar;
 
 public:
 	virtual ~ISound() { };
@@ -24,5 +24,7 @@ public:
 	virtual void 	set_switch_menu_sound(bool b) = 0;
 	virtual void 	set_game_over(bool b) = 0;
 	virtual void 	set_new_game(bool b) = 0;
+	virtual void 	set_mute(bool b) = 0;
+	virtual bool 	get_mute() = 0;
 
 };

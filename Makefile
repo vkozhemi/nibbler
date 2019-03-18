@@ -1,7 +1,7 @@
 NAME	:= nibbler
 
 CC		:= clang++
-CFLAGS	:= #-Wall -Werror -Wextra
+CFLAGS	:= -Wall -Werror -Wextra
 
 DEPS	:= inc/IGraph.hpp inc/Game.hpp inc/Rect.hpp inc/Snake.hpp inc/Network.hpp
 SRCS	:= src/Game.cpp src/Snake.cpp src/Network.cpp src/main.cpp
@@ -14,7 +14,9 @@ $(NAME): $(OBJS)
 	make -C libSDL
 	make -C libSFML
 	make -C libSFMLSound
-	$(CC) $(CFLAGS) -o $@ $^ -fsanitize=address 
+
+	$(CC) $(CFLAGS) -o $@ $^ -fsanitize=address -std=c++14
+
 
 %.o: %.cpp $(DEPS)
 	$(CC) $(CFLAGS) -c $< -o $@

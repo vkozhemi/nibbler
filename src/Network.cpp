@@ -1,7 +1,16 @@
 #include "../inc/Network.hpp"
+#include <pthread.h>
+
+static int check_accept;
 
 Network::Network(bool serv) {
 	serverBool = serv;
+	init();
+}
+
+Network::Network(std::string ip) {
+	serverBool = false;
+	server_ipv_str = ip;
 	init();
 }
 
@@ -11,6 +20,7 @@ Network::Network() {
 }
 
 Network::~Network() {
+	printf("destructor\n");
 	shutdown_properly(EXIT_FAILURE);
 }
 
@@ -27,17 +37,29 @@ int Network::connect_server(peer_t *server) {
 	struct sockaddr_in server_addr;
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr(SERVER_IPV4_ADDR);
+	server_addr.sin_addr.s_addr = inet_addr(server_ipv_str.c_str());
 	server_addr.sin_port = htons(SERVER_LISTEN_PORT);
 	
 	server->addres = server_addr;
-	
+
+	struct timeval timeout;
+	timeout.tv_sec = 3;
+	timeout.tv_usec = 0;
+
+	if (setsockopt (server->socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+		perror("setsockopt failed\n");
+
+	if (setsockopt (server->socket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+		perror("setsockopt failed\n");
+
+	// fcntl(server->socket, F_SETFL, O_NONBLOCK);
+
 	if (connect(server->socket, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) != 0) {
 		perror("connect()");
 		return (-1);
 	}
 	
-	printf("Connected to %s:%d.\n", SERVER_IPV4_ADDR, SERVER_LISTEN_PORT);
+	printf("Connected to %s:%d.\n", server_ipv_str.c_str(), SERVER_LISTEN_PORT);
 	
 	return (0);
 }
@@ -56,11 +78,21 @@ int Network::start_listen_socket(int *listen_sock) {
 		perror("setsockopt");
 		return (-1);
 	}
+
+	struct timeval timeout;
+	timeout.tv_sec = 3;
+	timeout.tv_usec = 0;
+
+	if (setsockopt (*listen_sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+		perror("setsockopt failed\n");
+
+	if (setsockopt (*listen_sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+		perror("setsockopt failed\n");
 	
 	struct sockaddr_in my_addr;
 	memset(&my_addr, 0, sizeof(my_addr));
 	my_addr.sin_family = AF_INET;
-	my_addr.sin_addr.s_addr = inet_addr(SERVER_IPV4_ADDR);
+	my_addr.sin_addr.s_addr =  htonl(INADDR_ANY);
 	my_addr.sin_port = htons(SERVER_LISTEN_PORT);
  
 	if (bind(*listen_sock, (struct sockaddr*)&my_addr, sizeof(struct sockaddr)) != 0) {
@@ -89,55 +121,22 @@ void Network::shutdown_properly(int code) {
 	}
 	else
 	{
-		delete_peer(&server);
-		printf("Shutdown client properly.\n");
+		close(server.socket);
+		printf("Shutdown client properly.\ncode = % d", code);
 		exit(code);
 	}
 }
-
-int Network::build_fd_setsCl(peer_t *server, fd_set *read_fds, fd_set *write_fds, fd_set *except_fds) {
-	FD_ZERO(read_fds);
-	FD_SET(STDIN_FILENO, read_fds);
-	FD_SET(server->socket, read_fds);
-	
-	FD_ZERO(write_fds);
-	// there is smth to send, set up write_fd for server socket
-	if (server->send_buffer.current > 0)
-		FD_SET(server->socket, write_fds);
-	
-	FD_ZERO(except_fds);
-	FD_SET(STDIN_FILENO, except_fds);
-	FD_SET(server->socket, except_fds);
-	
-	return (0);
-}
-
-int Network::build_fd_sets(fd_set *read_fds, fd_set *write_fds, fd_set *except_fds) {
-	FD_ZERO(read_fds);
-	FD_SET(STDIN_FILENO, read_fds);
-	FD_SET(listen_sock, read_fds);
-
-	if (connection.socket != NO_SOCKET)
-			FD_SET(connection.socket, read_fds);
-
-	FD_ZERO(write_fds);
-	if (connection.socket != NO_SOCKET && connection.send_buffer.current > 0)
-			FD_SET(connection.socket, write_fds);
-
-	FD_ZERO(except_fds);
-	FD_SET(STDIN_FILENO, except_fds);
-	FD_SET(listen_sock, except_fds);
-
-	if (connection.socket != NO_SOCKET)
-			FD_SET(connection.socket, except_fds);
-	return (0);
-}  
 
 int Network::handle_new_connection() {
 	struct sockaddr_in client_addr;
 	memset(&client_addr, 0, sizeof(client_addr));
 	socklen_t client_len = sizeof(client_addr);
+
+	std::cout << "check_accept1 " << check_accept << std::endl;
 	int new_client_sock = accept(listen_sock, (struct sockaddr *)&client_addr, &client_len);
+	check_accept = new_client_sock;
+	std::cout << "check_accept2 " << check_accept << std::endl;
+
 	if (new_client_sock < 0) {
 		perror("accept()");
 		return (-1);
@@ -151,8 +150,6 @@ int Network::handle_new_connection() {
 	if (connection.socket == NO_SOCKET) {
 		connection.socket = new_client_sock;
 		connection.addres = client_addr;
-		connection.current_sending_byte   = -1;
-		connection.current_receiving_byte = 0;
 		return (0);
 	}
 	printf("There is too much connections. Close new connection %s:%d.\n", client_ipv4_str, client_addr.sin_port);
@@ -165,129 +162,96 @@ int Network::close_client_connection(peer_t *client) {
 	
 	close(client->socket);
 	client->socket = NO_SOCKET;
-	// dequeue_all(&client->send_buffer);
-	client->current_sending_byte   = -1;
-	client->current_receiving_byte = 0;
 	return ((1));
 }
 
 void  Network::init() { 
-	
+	check_accept = 0;
 	if (serverBool && start_listen_socket(&listen_sock) != 0)
 		exit(EXIT_FAILURE);
 	
-	if (!serverBool) {
-		// create_peer(&server);
-		if (connect_server(&server) != 0)
-			shutdown_properly(EXIT_FAILURE);
-	}
+	if (!serverBool && connect_server(&server) != 0)
+		shutdown_properly(EXIT_FAILURE);
 
 	/* Set nonblock for stdin. */
-	int flag = fcntl(STDIN_FILENO, F_GETFL, 0);
-	flag |= O_NONBLOCK;
-	fcntl(STDIN_FILENO, F_SETFL, flag);
+	// int flag = fcntl(STDIN_FILENO, F_GETFL, 0);
+	// flag |= O_NONBLOCK;
+	// fcntl(STDIN_FILENO, F_SETFL, flag);
 	
-	if (serverBool) {
+	if (serverBool)
 		connection.socket = NO_SOCKET;
-		// create_peer(&connection);
-	}
-	
+
 	high_sock = (serverBool) ? listen_sock : server.socket;
 	
 	if (serverBool) {
 		printf("Waiting for incoming connections.\n");
-		handle_new_connection();
+		waiting();
+		//handle_new_connection();
 	}
-	
 }
 
-int Network::cycle(eKeyType key) {
+int Network::cycle(eKeyType *key, int *x, int *y) {
+	int arr[3];
 
-	struct timeval tv;
-	tv.tv_usec = 0;
-	tv.tv_sec = 0;
+	arr[0] = *key;
+	if (serverBool) {
+		arr[1] = *x;
+		arr[2] = *y;
 
-
-
-	if (serverBool)
-		build_fd_sets(&read_fds, &write_fds, &except_fds);
-	else
-		build_fd_setsCl(&server, &read_fds, &write_fds, &except_fds);
-
-	if (serverBool && connection.socket > high_sock)
-		high_sock = connection.socket;
-	int activity = select(high_sock + 1, &read_fds, &write_fds, &except_fds, &tv);
-	switch (activity) {
-		case -1:
-			perror("select()");
-			shutdown_properly(EXIT_FAILURE);
-
-		case 0:
-			return (0);
-		
-		default:
-			/* All set fds should be checked. */
-			if (FD_ISSET(STDIN_FILENO, &read_fds)) {
-				shutdown_properly(EXIT_FAILURE);
-			}
-
-			if (serverBool && FD_ISSET(listen_sock, &read_fds)) {
-				handle_new_connection();
-			}
-			
-			if (FD_ISSET(STDIN_FILENO, &except_fds)) {
-				printf("except_fds for stdin.\n");
-				shutdown_properly(EXIT_FAILURE);
-			}
-
-			if (serverBool && FD_ISSET(listen_sock, &except_fds)) {
-				printf("Exception listen socket fd.\n");
-				shutdown_properly(EXIT_FAILURE);
-			}
-			
-			if (serverBool) {
-				if (connection.socket != NO_SOCKET && FD_ISSET(connection.socket, &read_fds)) {
-					recv(connection.socket, &key, sizeof(key), MSG_DONTWAIT);
-				}
-	
-				if (connection.socket != NO_SOCKET && FD_ISSET(connection.socket, &write_fds)) {
-					send(connection.socket, &key, sizeof(key), 0);
-					
-				}
-
-				if (connection.socket != NO_SOCKET && FD_ISSET(connection.socket, &except_fds)) {
-					printf("Exception client fd.\n");
-					close_client_connection(&connection);
-				}
-			}
-			else
-			{
-				if (FD_ISSET(server.socket, &read_fds))
-					recv(server.socket, &key, sizeof(key), MSG_DONTWAIT);
-
-				if (FD_ISSET(server.socket, &write_fds)) {
-					send(server.socket, &key, sizeof(key), 0);
-				}
-
-				if (FD_ISSET(server.socket, &except_fds)) {
-					printf("except_fds for server.\n");
-					shutdown_properly(EXIT_FAILURE);
-				}
-			}
+		std::cout << "APPLE x = " << *x << " y = " << *y << std::endl;
 	}
-	printf("And we are still waiting for clients' or stdin activity. You can type something to send:\n");
 
-	keyNetwork = key;
-	std::cout << "keyNetwork = " << keyNetwork << std::endl;
+	send( (serverBool) ? connection.socket : server.socket, arr, sizeof(arr), 0);
+	arr[0] = none;
+	recv((serverBool) ? connection.socket : server.socket, arr, sizeof(arr), 0);
+	*key = (eKeyType)arr[0];
+
+	if (!serverBool) {
+		*x = arr[1];
+		*y = arr[2];
+
+		std::cout << "APPLE x = " << *x << " y = " << *y << std::endl;
+	}
+
 	return (0);
 }
- 
 
-int Network::delete_peer(peer_t *peer)
-{
-	close(peer->socket);
-	return (1);
-}
+// --------------------------      send/recv snake coord            ------------------------------
+
+// int Network::cycle(std::vector<rect> *snakeRect1, std::vector<rect> *snakeRect2, eKeyType *k) {
+// 	int siz = (*snakeRect1).size();
+
+// 	rect snake[siz];
+// 	for (int i = 0; i < siz; i++)
+// 	{
+// 		snake[i].x = (*snakeRect1)[i].x;
+// 		snake[i].y = (*snakeRect1)[i].y;
+// 	}
+
+// 	snake[1].s = (int)*k;
+
+// 	std::cout << "snakeRect1 = " << snake[1].s << std::endl;
+
+// 	send( (serverBool) ? connection.socket : server.socket, snake, sizeof(snake), 0);
+// 	printf("1\n");
+// 	snake[1].s = (int)none;
+// 	recv((serverBool) ? connection.socket : server.socket, snake, sizeof(snake), 0);
+// 	printf("2\n");
+
+// 	for (int i = 0; i < siz; i++)
+// 	{
+// 		(*snakeRect2)[i].x = snake[i].x;
+// 		(*snakeRect2)[i].y = snake[i].y;
+// 	}
+
+
+// 	*k = (eKeyType)snake[1].s;
+// 	std::cout << "FROM  = " << snake[1].s << std::endl;
+
+
+// 	return 0;
+// }
+
 
 char *Network::peer_get_addres_str(peer_t *peer)
 {
@@ -297,4 +261,29 @@ char *Network::peer_get_addres_str(peer_t *peer)
 	sprintf(ret, "%s:%d", peer_ipv4_str, peer->addres.sin_port);
 	
 	return (ret);
+}
+
+void* Network::one(void *args) {
+	char	sec;
+
+	sec = 10;
+	printf("waiting for connection \n");
+	while (sec >= 0)
+	{
+		sleep(1);
+		printf("%d\n", sec);
+		if (check_accept)
+			return 0;
+		sec--;
+	}
+	exit(0);
+    return args;
+}
+
+void	Network::waiting()
+{
+	pthread_t	thread;
+
+	pthread_create(&thread, NULL, one, NULL);
+	handle_new_connection();
 }

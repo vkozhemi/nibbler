@@ -21,6 +21,8 @@
 #include "Snake.hpp"
 #include "Network.hpp"
 
+#include <sys/time.h>
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -33,6 +35,7 @@
 
 class Game
 {
+	size_t				iter;
 	eKeyType			libNum;
 	void				*ext_library;
 	void				*ext_library2;
@@ -49,7 +52,6 @@ class Game
 	Snake				*snake1;
 	Snake				*snake2;
 	int					speed;
-	bool				multiplayer;
 	bool				menu;
 	bool				start;
 	int					buttonNum;
@@ -57,20 +59,16 @@ class Game
 	rect				boomRect;
 	int					winner;
 	int					gameOverCount;
-	bool				startNetwork;
 	bool				server;
+	bool 				client;
 	eKeyType			keyToNetwork;
 	std::string			idClient;
 	Network				*network;
+	bool				iAmReady;
+	bool				connectIsReady;
+	rect                appleFromServer;
 
-	
-	// int listenfd, connfd, nready, maxfdp1; 
- //    char buffer[MAXLINE]; 
- //    pid_t childpid; 
- //    fd_set rset; 
- //    ssize_t n; 
- //    socklen_t len; 
-	// struct sockaddr_in cliaddr, servaddr; 
+
 
 public:
 	void					netGame(void);
@@ -84,6 +82,7 @@ public:
 	Game(int w, int h, std::string ip);
 	~Game();
 	
+	void	init();
 	void	keyHandle(eKeyType key);
 	void	getLib(eKeyType key);
 	void	closeLib();
@@ -92,7 +91,6 @@ public:
 	bool	checkCollision();
 	bool	newGame();
 	void	gameOver();
-	void	networkFunc();
 	void	createServer();
 
 };

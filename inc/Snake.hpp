@@ -32,6 +32,9 @@ enum eKeyType
 	num1,
 	num2,
 	num3,
+	ready,
+	mute,
+	refresh,
 	none
 };
 
@@ -39,19 +42,26 @@ class Snake
 {
 
 public:
-	int						screenWidth;
-	int						screenHeiht;
-	std::vector<rect>		snakeRect;
-	char					direction;
-	int						size;
-	int						step;
-	rect					pieceRect;
+	int					screenWidth;
+	int					screenHeiht;
+	std::vector<rect>	snakeRect;
+	char				direction;
+	int					size;
+	int					step;
+	rect				pieceRect;
+
+	eKeyType			key;
+
+	bool				waiting;
+	bool				multiplayer;
+	bool				network;
+	bool				muteVar;
 
 	Snake(int width, int height);
 	Snake(Snake &obj);
 	~Snake();
 
-	void	choseDirection(eKeyType key);
+	void	choseDirection(eKeyType keyType);
 	bool	moveSnake();
 
 };

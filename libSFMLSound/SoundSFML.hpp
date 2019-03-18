@@ -20,6 +20,7 @@ protected:
 	bool switch_menu_sound;
 	bool game_over;
 	bool new_game;
+	bool muteVar;
 
 public:
 
@@ -34,5 +35,6 @@ public:
 	virtual void 	set_switch_menu_sound(bool b);
 	virtual void 	set_game_over(bool b);
 	virtual void 	set_new_game(bool b);
-	
+	virtual void 	set_mute(bool b);
+	virtual bool 	get_mute();
 };
