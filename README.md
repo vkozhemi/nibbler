@@ -16,22 +16,23 @@ any of your libraries.
 ![Image alt](https://github.com/vkozhemi/nibbler/raw/master/img/architecture.png)
 
 ## The game rules
-• The unit of measure is the square.
-• The game area is a finite plane of squares. The edges of the plane can’t be passed through.
-• The snake starts with a size of 4 squares in the middle of the game area. 
-• The snake progresses forward automatically at a constant speed.
-• The snake can’t move backwards.
-• The snake must be able to turn left or right using the keyboard.
-• The goal of this game is to feed your snake to help it grow.
-• One food element fills one and only one square of the area.
-• When the head of the snake is over a square occupied by food, the food disappears, and one section is added to the tail of the snake on the next move on the same square as the previous last section.
-• If the snake hits a wall or one of its own sections, the game is over.
-• A scoring system
-• A bonus of food appears for a short period of time
-• The head section looks different from the others sections
-• Sounds 
-• Multiplayer ! Two snakes fighting for the same food ! Wicked ! 
-• Multiplayer through network. Same as above. 
+
+	• The unit of measure is the square.
+	• The game area is a finite plane of squares. The edges of the plane can’t be passed through.
+	• The snake starts with a size of 4 squares in the middle of the game area. 
+	• The snake progresses forward automatically at a constant speed.
+	• The snake can’t move backwards.
+	• The snake must be able to turn left or right using the keyboard.
+	• The goal of this game is to feed your snake to help it grow.
+	• One food element fills one and only one square of the area.
+	• When the head of the snake is over a square occupied by food, the food disappears, and one section is added to the tail of the snake on the next move on the same square as the previous last section.
+	• If the snake hits a wall or one of its own sections, the game is over.
+	• A scoring system
+	• A bonus of food appears for a short period of time
+	• The head section looks different from the others sections
+	• Sounds 
+	• Multiplayer ! Two snakes fighting for the same food ! Wicked ! 
+	• Multiplayer through network. Same as above. 
 
 ## Compilation and usage
 
