@@ -13,7 +13,7 @@ the player’s inputs. The main executable will only focus on the game logic and
 with your dynamic libraries. The main executable must interact in a identical way with
 any of your libraries.
 
-![Image alt](https://github.com/vkozhemi/nibbler/raw/master/img/architecture.png)
+<img src="https://github.com/vkozhemi/nibbler/raw/master/img/architecture.png" width="500">
 
 ## The game rules
 
